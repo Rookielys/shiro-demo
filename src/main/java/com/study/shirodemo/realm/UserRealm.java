@@ -21,9 +21,11 @@ public class UserRealm extends AuthorizingRealm {
     @Override
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
         Object principal = principalCollection.getPrimaryPrincipal();
-        System.out.println(principal);
+//        System.out.println(principal);
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
-        authorizationInfo.addStringPermission("user:add");
+        if ("admin".equals(principal)) {
+            authorizationInfo.addStringPermission("user:add");
+        }
         return authorizationInfo;
     }
 
@@ -36,14 +38,18 @@ public class UserRealm extends AuthorizingRealm {
      */
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
-        System.out.println("开始认证。。。");
-        // 根据authenticationToken中获取的用户信息，从db中查询
-        String name = "admin";
-        String password = "038bdaf98f2037b31f1e75b5b4c9b26e";
-        UsernamePasswordToken user = (UsernamePasswordToken) authenticationToken;
-        if (!user.getUsername().equals(name)) {
-            return null; // 会抛UnknownAccountException
+//        System.out.println("开始认证。。。");
+//        // 根据authenticationToken中获取的用户信息，从db中查询
+//        String name = "admin";
+//        String password = "038bdaf98f2037b31f1e75b5b4c9b26e";
+//        UsernamePasswordToken user = (UsernamePasswordToken) authenticationToken;
+//        if (!user.getUsername().equals(name)) {
+//            return null; // 会抛UnknownAccountException
+//        }
+        if ("admin".equals(authenticationToken.getPrincipal())) {
+            return new SimpleAuthenticationInfo("admin", "admin", getName());
+        } else {
+            throw new AuthenticationException("haha");
         }
-        return new SimpleAuthenticationInfo(name, password, ByteSource.Util.bytes(name), getName());
     }
 }

@@ -1,5 +1,6 @@
 package com.study.shirodemo.config;
 
+import com.study.shirodemo.filter.MyFilter;
 import com.study.shirodemo.realm.UserRealm;
 import org.apache.shiro.authc.Authenticator;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
@@ -9,6 +10,8 @@ import org.apache.shiro.authc.pam.ModularRealmAuthenticator;
 import org.apache.shiro.authz.Authorizer;
 import org.apache.shiro.authz.ModularRealmAuthorizer;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
+import org.apache.shiro.mgt.DefaultSessionStorageEvaluator;
+import org.apache.shiro.mgt.DefaultSubjectDAO;
 import org.apache.shiro.mgt.RememberMeManager;
 import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.session.mgt.eis.*;
@@ -40,16 +43,18 @@ public class ShiroConfig {
     public ShiroFilterFactoryBean getShiroFilterFactoryBean(DefaultWebSecurityManager securityManager) {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
         shiroFilterFactoryBean.setSecurityManager(securityManager);
+        shiroFilterFactoryBean.getFilters().put("myperm", new MyFilter());
         // 为资源添加内置拦截器
+        // filter可以自定义
         Map<String, String> filters = new LinkedHashMap<>();
-        filters.put("/add", "anon");
-        filters.put("/login", "anon");
-        filters.put("/update", "perms[user:add]");
-        filters.put("/**", "authc");
+        filters.put("/add", "myperm,perms[user:add]");
+//        filters.put("/login", "anon");
+//        filters.put("/update", "perms[user:add]");
+//        filters.put("/**", "authc");
         // 设置一些默认的url，不会被上面的拦截器拦截
-        shiroFilterFactoryBean.setLoginUrl("/toLogin");
-        shiroFilterFactoryBean.setSuccessUrl("/success");
-        shiroFilterFactoryBean.setUnauthorizedUrl("/unauthorized");
+//        shiroFilterFactoryBean.setLoginUrl("/toLogin");
+//        shiroFilterFactoryBean.setSuccessUrl("/success");
+//        shiroFilterFactoryBean.setUnauthorizedUrl("/unauthorized");
         shiroFilterFactoryBean.setFilterChainDefinitionMap(filters);
         return shiroFilterFactoryBean;
     }
@@ -58,8 +63,7 @@ public class ShiroConfig {
      * DefaultWebSecurityManager
      */
     @Bean
-    public DefaultWebSecurityManager getDefaultWebSecurityManager(UserRealm realm, RememberMeManager rememberMeManager,
-                                                                  DefaultSessionManager sessionManager) {
+    public DefaultWebSecurityManager getDefaultWebSecurityManager(UserRealm realm, RememberMeManager rememberMeManager) {
         DefaultWebSecurityManager defaultWebSecurityManager = new DefaultWebSecurityManager();
         defaultWebSecurityManager.setRealm(realm);
         defaultWebSecurityManager.setRememberMeManager(rememberMeManager);
@@ -67,6 +71,12 @@ public class ShiroConfig {
 //        defaultWebSecurityManager.setSessionManager(sessionManager);
         //这里的CacheManager会覆盖SessionManager的
 //        defaultWebSecurityManager.setCacheManager(new MemoryConstrainedCacheManager());
+        // 关闭session
+        DefaultSubjectDAO subjectDAO = new DefaultSubjectDAO();
+        DefaultSessionStorageEvaluator defaultSessionStorageEvaluator = new DefaultSessionStorageEvaluator();
+        defaultSessionStorageEvaluator.setSessionStorageEnabled(false);
+        subjectDAO.setSessionStorageEvaluator(defaultSessionStorageEvaluator);
+        defaultWebSecurityManager.setSubjectDAO(subjectDAO);
         return defaultWebSecurityManager;
     }
 
@@ -74,9 +84,9 @@ public class ShiroConfig {
      * Realm
      */
     @Bean
-    public UserRealm getRealm(CredentialsMatcher matcher) {
+    public UserRealm getRealm() {
         UserRealm userRealm = new UserRealm();
-        userRealm.setCredentialsMatcher(matcher);
+        //userRealm.setCredentialsMatcher(matcher);
         return userRealm;
     }
 
@@ -84,10 +94,11 @@ public class ShiroConfig {
      * 认证时的密码比对器
      * @return
      */
-    @Bean
+//    @Bean
     public CredentialsMatcher getCredentialsMatcher() {
         HashedCredentialsMatcher matcher = new HashedCredentialsMatcher();
         matcher.setHashAlgorithmName("MD5");
+        // 迭代次数
         matcher.setHashIterations(1024);
         return matcher;
     }
@@ -183,7 +194,7 @@ public class ShiroConfig {
      * @param sessionIdGenerator
      * @return
      */
-    @Bean
+//    @Bean
     public SessionDAO getEnterpriseCacheSessionDAO(SessionIdGenerator sessionIdGenerator) {
 //        EnterpriseCacheSessionDAO sessionDAO = new EnterpriseCacheSessionDAO();
 //        sessionDAO.setSessionIdGenerator(sessionIdGenerator);
@@ -198,12 +209,15 @@ public class ShiroConfig {
 
     /**
      * session管理器
+     * 必须使用实现了WebSessionManager接口的session管理器
+     * ServletContainerSessionManager
+     * 默认用的是DefaultWebSessionManager
      * 对session的操作委托给了sessionDAO
      * 需要注入到SecuriManager
      * @param sessionDAO
      * @return
      */
-    @Bean
+//    @Bean
     public DefaultSessionManager getDefaultSessionManager(SessionDAO sessionDAO) {
         DefaultSessionManager sessionManager = new DefaultSessionManager();
         sessionManager.setSessionDAO(sessionDAO);
